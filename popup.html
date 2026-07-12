@@ -3,33 +3,80 @@
 <head>
   <meta charset="utf-8">
   <style>
+    :root {
+      --bg-primary: #1e1e22;
+      --bg-secondary: #2b2b30;
+      --bg-card: #374151;
+      --text-primary: #e8eaed;
+      --text-secondary: #9ca3af;
+      --accent-green: #10b981;
+      --accent-blue: #3b82f6;
+      --accent-yellow: #fbbf24;
+      --border-color: #3f3f46;
+    }
+    
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg-primary: #ffffff;
+        --bg-secondary: #f3f4f6;
+        --bg-card: #e5e7eb;
+        --text-primary: #1f2937;
+        --text-secondary: #6b7280;
+        --border-color: #d1d5db;
+      }
+    }
+    
     body {
       width: 320px; margin: 0; padding: 16px;
       font-family: 'Segoe UI', system-ui, sans-serif;
-      background-color: #1e1e22; color: #e8eaed;
+      background-color: var(--bg-primary); color: var(--text-primary);
     }
-    .header { text-align: center; margin-bottom: 16px; border-bottom: 1px solid #3f3f46; padding-bottom: 12px; }
-    .header h1 { font-size: 18px; margin: 0; color: #10b981; }
+    .header { text-align: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
+    .header h1 { font-size: 18px; margin: 0; color: var(--accent-green); }
     .site-badge {
-      background: #2b2b30; padding: 8px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 16px;
-      display: flex; justify-content: space-between; align-items: center; border: 1px solid #3f3f46;
+      background: var(--bg-secondary); padding: 8px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 16px;
+      display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);
     }
-    .domain-name { font-weight: bold; color: #3b82f6; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .section-card { background: #2b2b30; border-radius: 8px; padding: 12px 14px; border: 1px solid #3f3f46; margin-bottom: 12px; }
+    .domain-name { font-weight: bold; color: var(--accent-blue); max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rtl-indicator { 
+      font-size: 11px; 
+      padding: 2px 8px; 
+      border-radius: 4px; 
+      background: var(--accent-green); 
+      color: white;
+      display: none;
+    }
+    .rtl-indicator.visible { display: inline-block; }
+    .section-card { background: var(--bg-secondary); border-radius: 8px; padding: 12px 14px; border: 1px solid var(--border-color); margin-bottom: 12px; }
     .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; font-size: 14px; }
     .setting-row:last-child { margin-bottom: 0; }
-    .sub-text { display: block; font-size: 11px; color: #9ca3af; margin-top: 2px; }
+    .sub-text { display: block; font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
     
     .switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #52525b; transition: .3s; border-radius: 24px; }
     .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
-    input:checked + .slider { background-color: #10b981; }
+    input:checked + .slider { background-color: var(--accent-green); }
     input:checked + .slider:before { transform: translateX(18px); }
     input:disabled + .slider { opacity: 0.4; cursor: not-allowed; }
     
-    .global-toggle-section { background: #374151; border: 1px solid #4b5563; }
-    .global-toggle-label { color: #fbbf24; }
+    .global-toggle-section { background: var(--bg-card); border: 1px solid #4b5563; }
+    .global-toggle-label { color: var(--accent-yellow); }
+    
+    .action-buttons { display: flex; gap: 8px; margin-top: 12px; }
+    .btn { 
+      flex: 1; 
+      padding: 8px 12px; 
+      border: none; 
+      border-radius: 6px; 
+      cursor: pointer; 
+      font-size: 12px; 
+      font-weight: 500;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.8; }
+    .btn-reset { background: #ef4444; color: white; }
+    .btn-detect { background: var(--accent-blue); color: white; }
   </style>
 </head>
 <body>
@@ -49,7 +96,10 @@
   </div>
 
   <div class="site-badge">
-    <span>Current Site:</span>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span>Current Site:</span>
+      <span class="rtl-indicator" id="rtlIndicator">RTL Detected</span>
+    </div>
     <span class="domain-name" id="domainName">Loading...</span>
   </div>
 
@@ -67,6 +117,11 @@
         <span class="sub-text">Use if site resists changes</span>
       </div>
       <label class="switch"><input type="checkbox" id="forceImportant"><span class="slider"></span></label>
+    </div>
+    
+    <div class="action-buttons">
+      <button class="btn btn-detect" id="detectRtlBtn">Detect RTL</button>
+      <button class="btn btn-reset" id="resetBtn">Reset Site</button>
     </div>
   </div>
 
