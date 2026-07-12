@@ -1,6 +1,42 @@
 if (typeof window.__arabicFixerLoaded === "undefined") {
   window.__arabicFixerLoaded = true;
   const STYLE_ID = "bidi-fixer-style";
+  
+  // RTL language codes and scripts detection
+  const RTL_LANGUAGES = ['ar', 'fa', 'he', 'ur', 'ps', 'sd', 'yi', 'dv'];
+  const RTL_SCRIPTS = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/; // Arabic, Syriac, Samaritan, Mandaic, Arabic Extended, Presentation Forms
+  
+  function detectPageRTL() {
+    // Check html lang attribute
+    const htmlLang = document.documentElement.lang?.toLowerCase() || '';
+    if (RTL_LANGUAGES.some(lang => htmlLang.startsWith(lang))) {
+      return true;
+    }
+    
+    // Check html dir attribute
+    const htmlDir = document.documentElement.dir?.toLowerCase() || '';
+    if (htmlDir === 'rtl') {
+      return true;
+    }
+    
+    // Check body dir attribute
+    const bodyDir = document.body?.dir?.toLowerCase() || '';
+    if (bodyDir === 'rtl') {
+      return true;
+    }
+    
+    // Check for significant RTL content (sample first 500 characters of body text)
+    const bodyText = (document.body?.textContent || '').substring(0, 500);
+    const rtlCharCount = (bodyText.match(RTL_SCRIPTS) || []).length;
+    const totalAlphaChars = bodyText.replace(/[^a-zA-Z\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g, '').length;
+    
+    // If more than 30% of alphabetic characters are RTL, consider it RTL page
+    if (totalAlphaChars > 20 && rtlCharCount / totalAlphaChars > 0.3) {
+      return true;
+    }
+    
+    return false;
+  }
 
   function generateCSS(forceImportant) {
     const imp = forceImportant ? " !important" : "";
@@ -15,6 +51,9 @@ if (typeof window.__arabicFixerLoaded === "undefined") {
     `;
   }
 
+  // Debounce timer for CSS re-application
+  let debounceTimer = null;
+  
   function applyStyles(enabled, forceImportant) {
     let styleEl = document.getElementById(STYLE_ID);
     if (enabled) {
@@ -46,12 +85,15 @@ if (typeof window.__arabicFixerLoaded === "undefined") {
       }
       
       if (shouldReapply) {
-        // Re-apply styles to newly added content
-        const styleEl = document.getElementById(STYLE_ID);
-        if (styleEl) {
-          // Force reflow to ensure styles are applied to new elements
-          void styleEl.offsetWidth;
-        }
+        // Debounce re-application to avoid performance issues
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          const styleEl = document.getElementById(STYLE_ID);
+          if (styleEl) {
+            // Force reflow to ensure styles are applied to new elements
+            void styleEl.offsetWidth;
+          }
+        }, 100); // 100ms debounce
       }
     });
     
@@ -71,13 +113,36 @@ if (typeof window.__arabicFixerLoaded === "undefined") {
         observer = null;
       }
       sendResponse({ success: true });
+    } else if (request.action === "DETECT_RTL") {
+      // Handle RTL detection request
+      const isRTL = detectPageRTL();
+      sendResponse({ isRTL });
     }
     return true;
   });
 
+  // Cleanup on page unload to prevent memory leaks
+  window.addEventListener('unload', () => {
+    if (observer) {
+      observer.disconnect();
+      observer = null;
+    }
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+      debounceTimer = null;
+    }
+  });
+
   try {
     const domain = window.location.hostname.toLowerCase();
+    
+    // Wait for storage to be ready before applying styles (fix race condition)
     chrome.storage.local.get(["sitePreferences", "globalEnabled"], (result) => {
+      if (chrome.runtime.lastError) {
+        console.error("BidiFixer: Storage access error:", chrome.runtime.lastError);
+        return;
+      }
+      
       const prefs = result.sitePreferences || {};
       const globalEnabled = result.globalEnabled || false;
       const siteSettings = prefs[domain];
@@ -103,5 +168,7 @@ if (typeof window.__arabicFixerLoaded === "undefined") {
         setupMutationObserver(forceImportant);
       }
     });
-  } catch {}
+  } catch (error) {
+    console.error("BidiFixer: Error during initialization:", error);
+  }
 }

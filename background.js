@@ -34,24 +34,8 @@ function updateTabIconAndBadge(tabId, isEnabled) {
     chrome.action.setBadgeBackgroundColor({ color: "#6b7280", tabId: tabId }); // رمادي مطفأ
   }
 
-  // 2. محاولة تغيير صورة الأيقونة (في حال كانت ملفات الـ PNG موجودة وسليمة 100%)
-  const iconPath = isEnabled
-    ? {
-        16: "icon_active.png",
-        48: "icon_active.png",
-        128: "icon_active.png",
-      }
-    : {
-        16: "icon_gray.png",
-        48: "icon_gray.png",
-        128: "icon_gray.png",
-      };
-
-  chrome.action.setIcon({ tabId: tabId, path: iconPath }, () => {
-    if (chrome.runtime.lastError) {
-      // إذا كان هناك أي مشكلة في صور الأيقونة، سيتجاهلها المتصفح وسيعتمد على الشارة الملونة فوق الأيقونة الأساسية
-    }
-  });
+  // Note: Icon image switching removed - missing icon_active.png/icon_gray.png files
+  // Badge text and color provide clear visual feedback instead
 }
 
 async function updateTab(tabId, url) {
@@ -103,6 +87,37 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
   }
 });
 
+// Cleanup: Reset badge when tab is closed to prevent stale state
+chrome.tabs.onRemoved.addListener((tabId) => {
+  // Chrome automatically cleans up badge for closed tabs, but we log for debugging
+  console.log(`BidiFixer: Tab ${tabId} closed`);
+});
+
+// Helper function to show keyboard feedback notification
+async function showKeyboardFeedback(message, duration = 2000) {
+  try {
+    // Create a temporary notification badge on the extension icon
+    await chrome.action.setBadgeText({ text: "✓" });
+    await chrome.action.setBadgeBackgroundColor({ color: "#10b981" });
+    
+    setTimeout(async () => {
+      // Restore normal badge based on current tab state
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab && tab.url) {
+        const domain = getHostname(tab.url);
+        const state = await getSiteState(domain);
+        await chrome.action.setBadgeText({ text: state.enabled ? "ON" : "OFF", tabId: tab.id });
+        await chrome.action.setBadgeBackgroundColor({ 
+          color: state.enabled ? "#10b981" : "#6b7280", 
+          tabId: tab.id 
+        });
+      }
+    }, duration);
+  } catch (error) {
+    console.error("BidiFixer: Could not show keyboard feedback:", error);
+  }
+}
+
 // مراقبة اختصارات الكيبورد (Ctrl+Shift+E) لتغيير الحالة فوراً
 chrome.commands.onCommand.addListener(async (command) => {
   if (command === "toggle_site") {
@@ -122,6 +137,9 @@ chrome.commands.onCommand.addListener(async (command) => {
       };
 
       await chrome.storage.local.set({ sitePreferences: prefs });
+      
+      // Show keyboard feedback notification
+      showKeyboardFeedback(newState ? "RTL Enabled" : "RTL Disabled");
     }
   }
 });
