@@ -32,7 +32,7 @@ node_modules/
 *.swp
 *.swo
 
-# System files
+# System
 .DS_Store
 Thumbs.db
 
