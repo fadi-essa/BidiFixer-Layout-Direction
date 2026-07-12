@@ -137,7 +137,7 @@ if (typeof window.__arabicFixerLoaded === "undefined") {
     const domain = window.location.hostname.toLowerCase();
     
     // Wait for storage to be ready before applying styles (fix race condition)
-    chrome.storage.local.get(["sitePreferences", "globalEnabled"], (result) => {
+    chrome.storage.sync.get(["sitePreferences", "globalEnabled", "excludePatterns"], (result) => {
       if (chrome.runtime.lastError) {
         console.error("BidiFixer: Storage access error:", chrome.runtime.lastError);
         return;
@@ -145,7 +145,30 @@ if (typeof window.__arabicFixerLoaded === "undefined") {
       
       const prefs = result.sitePreferences || {};
       const globalEnabled = result.globalEnabled || false;
+      const excludePatterns = result.excludePatterns || [];
       const siteSettings = prefs[domain];
+
+      // Check if domain matches any exclude pattern
+      let isExcluded = false;
+      if (excludePatterns.length > 0) {
+        for (const pattern of excludePatterns) {
+          try {
+            const regex = new RegExp(pattern, 'i');
+            if (regex.test(domain)) {
+              console.log(`BidiFixer: Domain ${domain} matches exclude pattern ${pattern}`);
+              isExcluded = true;
+              break;
+            }
+          } catch (error) {
+            console.error(`BidiFixer: Invalid exclude pattern ${pattern}:`, error);
+          }
+        }
+      }
+      
+      if (isExcluded) {
+        console.log(`BidiFixer: Skipping ${domain} due to exclude pattern`);
+        return;
+      }
 
       let isEnabled = false;
       let forceImportant = false;

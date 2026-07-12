@@ -9,9 +9,25 @@ function getHostname(url) {
 
 async function getSiteState(domain) {
   if (!domain) return { enabled: false, forceImportant: false };
-  const storage = await chrome.storage.local.get(["sitePreferences", "globalEnabled"]);
+  const storage = await chrome.storage.sync.get(["sitePreferences", "globalEnabled", "excludePatterns"]);
   const prefs = storage.sitePreferences || {};
   const globalEnabled = storage.globalEnabled || false;
+  const excludePatterns = storage.excludePatterns || [];
+  
+  // Check if domain matches any exclude pattern
+  if (excludePatterns.length > 0) {
+    for (const pattern of excludePatterns) {
+      try {
+        const regex = new RegExp(pattern, 'i');
+        if (regex.test(domain)) {
+          console.log(`BidiFixer: Domain ${domain} matches exclude pattern ${pattern}`);
+          return { enabled: false, forceImportant: false };
+        }
+      } catch (error) {
+        console.error(`BidiFixer: Invalid exclude pattern ${pattern}:`, error);
+      }
+    }
+  }
   
   // Check site-specific settings first, then fall back to global
   const siteState = prefs[domain] || { enabled: null, forceImportant: false };
@@ -78,7 +94,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
 
 // مراقبة أي تغيير يدوي في الإعدادات من واجهة الإضافة
 chrome.storage.onChanged.addListener(async (changes, area) => {
-  if (area === "local") {
+  if (area === "sync") {
     // Update all tabs when global settings change
     const tabs = await chrome.tabs.query({});
     for (const tab of tabs) {
@@ -129,14 +145,14 @@ chrome.commands.onCommand.addListener(async (command) => {
       const state = await getSiteState(domain);
       const newState = !state.enabled;
 
-      const storage = await chrome.storage.local.get(["sitePreferences"]);
+      const storage = await chrome.storage.sync.get(["sitePreferences"]);
       const prefs = storage.sitePreferences || {};
       prefs[domain] = {
         enabled: newState,
         forceImportant: state.forceImportant,
       };
 
-      await chrome.storage.local.set({ sitePreferences: prefs });
+      await chrome.storage.sync.set({ sitePreferences: prefs });
       
       // Show keyboard feedback notification
       showKeyboardFeedback(newState ? "RTL Enabled" : "RTL Disabled");
