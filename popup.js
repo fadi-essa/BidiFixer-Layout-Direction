@@ -3,13 +3,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   const siteEnabled = document.getElementById("siteEnabled");
   const forceImportant = document.getElementById("forceImportant");
   const globalEnabled = document.getElementById("globalEnabled");
-  const rtlIndicator = document.getElementById("rtlIndicator");
-  const detectRtlBtn = document.getElementById("detectRtlBtn");
   const resetBtn = document.getElementById("resetBtn");
   const excludePatternsEl = document.getElementById("excludePatterns");
   const saveExcludeBtn = document.getElementById("saveExcludeBtn");
   
-  // 1. قراءة إعدادات المواقع المحفوظة والإعداد العام من sync storage
+  // Read site preferences and global settings from sync storage
   const storage = await chrome.storage.sync.get(["sitePreferences", "globalEnabled", "excludePatterns"]);
   const prefs = storage.sitePreferences || {};
   const globalState = storage.globalEnabled || false;
@@ -66,42 +64,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     forceImportant.checked = siteSettings.forceImportant;
     forceImportant.disabled = !siteEnabled.checked;
     
-    // Auto-detect RTL on popup open
-    detectRTLContent();
+    // Auto-detect RTL on popup open (removed - feature disabled)
   } else {
     // صفحة غير مدعومة (مثل إعدادات كروم أو تبويب فارغ)
     domainNameEl.textContent = "Unsupported Page";
     domainNameEl.style.color = "#ef4444";
     siteEnabled.disabled = true;
     forceImportant.disabled = true;
-    detectRtlBtn.disabled = true;
     resetBtn.disabled = true;
   }
 
-  // Function to detect RTL content in the current page
-  async function detectRTLContent() {
-    if (!currentDomain) return;
-    
-    try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      chrome.tabs.sendMessage(tab.id, { action: "DETECT_RTL" }, (response) => {
-        if (chrome.runtime.lastError) {
-          console.log("BidiFixer: Could not detect RTL - content script not ready");
-          return;
-        }
-        if (response && response.isRTL) {
-          rtlIndicator.classList.add("visible");
-        } else {
-          rtlIndicator.classList.remove("visible");
-        }
-      });
-    } catch (error) {
-      console.log("BidiFixer: RTL detection error:", error);
-      rtlIndicator.classList.remove("visible");
-    }
-  }
-
-  // 3. دالة الحفظ للإعداد العام
+  // Function to save site settings
   globalEnabled.addEventListener("change", async () => {
     await chrome.storage.sync.set({ globalEnabled: globalEnabled.checked });
     // Clear site-specific override if turning on global and site was disabled
@@ -117,7 +90,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // 4. دالة الحفظ للموقع الحالي
+  // Function to save site settings
   async function saveSiteSettings() {
     if (!currentDomain) return;
     const updatedStorage = await chrome.storage.sync.get(["sitePreferences"]);
@@ -136,9 +109,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   siteEnabled.addEventListener("change", saveSiteSettings);
   forceImportant.addEventListener("change", saveSiteSettings);
   
-  // Detect RTL button handler
-  detectRtlBtn.addEventListener("click", detectRTLContent);
-  
   // Reset site settings button handler
   resetBtn.addEventListener("click", async () => {
     if (!currentDomain) return;
@@ -155,9 +125,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       siteEnabled.indeterminate = !globalEnabled.checked;
       forceImportant.checked = false;
       forceImportant.disabled = true;
-      
-      // Update badge indicator
-      rtlIndicator.classList.remove("visible");
     }
   });
   
