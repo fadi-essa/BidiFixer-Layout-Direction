@@ -31,9 +31,45 @@ if (typeof window.__arabicFixerLoaded === "undefined") {
     }
   }
 
+  // MutationObserver for dynamic content (SPAs like Gmail, Twitter, etc.)
+  let observer = null;
+  function setupMutationObserver(forceImportant) {
+    if (observer) observer.disconnect();
+    
+    observer = new MutationObserver((mutations) => {
+      let shouldReapply = false;
+      for (const mutation of mutations) {
+        if (mutation.addedNodes.length > 0) {
+          shouldReapply = true;
+          break;
+        }
+      }
+      
+      if (shouldReapply) {
+        // Re-apply styles to newly added content
+        const styleEl = document.getElementById(STYLE_ID);
+        if (styleEl) {
+          // Force reflow to ensure styles are applied to new elements
+          void styleEl.offsetWidth;
+        }
+      }
+    });
+    
+    observer.observe(document.body || document.documentElement, {
+      childList: true,
+      subtree: true
+    });
+  }
+
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "APPLY_CSS_FIX") {
       applyStyles(request.enabled, request.forceImportant);
+      if (request.enabled) {
+        setupMutationObserver(request.forceImportant);
+      } else if (observer) {
+        observer.disconnect();
+        observer = null;
+      }
       sendResponse({ success: true });
     }
     return true;
@@ -41,12 +77,30 @@ if (typeof window.__arabicFixerLoaded === "undefined") {
 
   try {
     const domain = window.location.hostname.toLowerCase();
-    chrome.storage.local.get(["sitePreferences"], (result) => {
+    chrome.storage.local.get(["sitePreferences", "globalEnabled"], (result) => {
       const prefs = result.sitePreferences || {};
+      const globalEnabled = result.globalEnabled || false;
       const siteSettings = prefs[domain];
 
-      if (siteSettings && siteSettings.enabled) {
-        applyStyles(true, siteSettings.forceImportant);
+      let isEnabled = false;
+      let forceImportant = false;
+
+      if (globalEnabled) {
+        // If global is enabled, check if site has explicit disable
+        if (siteSettings && siteSettings.enabled === false) {
+          isEnabled = false;
+        } else {
+          isEnabled = true;
+          forceImportant = siteSettings ? siteSettings.forceImportant : false;
+        }
+      } else if (siteSettings && siteSettings.enabled) {
+        isEnabled = true;
+        forceImportant = siteSettings.forceImportant;
+      }
+
+      if (isEnabled) {
+        applyStyles(true, forceImportant);
+        setupMutationObserver(forceImportant);
       }
     });
   } catch {}
