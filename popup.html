@@ -124,6 +124,17 @@
       <button class="btn btn-reset" id="resetBtn">Reset Site</button>
     </div>
   </div>
+  
+  <div class="section-card">
+    <div class="setting-row">
+      <div style="flex: 1;">
+        <span>Exclude URL Patterns</span>
+        <span class="sub-text">Regex patterns to disable extension (one per line)</span>
+      </div>
+    </div>
+    <textarea id="excludePatterns" rows="3" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); font-family: monospace; font-size: 12px; resize: vertical;" placeholder="example\.com&#10;.*\.test\.org"></textarea>
+    <button class="btn" id="saveExcludeBtn" style="background: var(--accent-blue); color: white; margin-top: 8px; width: 100%;">Save Exclude Patterns</button>
+  </div>
 
   <script src="popup.js"></script>
 </body>

@@ -6,11 +6,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   const rtlIndicator = document.getElementById("rtlIndicator");
   const detectRtlBtn = document.getElementById("detectRtlBtn");
   const resetBtn = document.getElementById("resetBtn");
+  const excludePatternsEl = document.getElementById("excludePatterns");
+  const saveExcludeBtn = document.getElementById("saveExcludeBtn");
   
-  // 1. قراءة إعدادات المواقع المحفوظة والإعداد العام
-  const storage = await chrome.storage.local.get(["sitePreferences", "globalEnabled"]);
+  // 1. قراءة إعدادات المواقع المحفوظة والإعداد العام من sync storage
+  const storage = await chrome.storage.sync.get(["sitePreferences", "globalEnabled", "excludePatterns"]);
   const prefs = storage.sitePreferences || {};
   const globalState = storage.globalEnabled || false;
+  const excludePatterns = storage.excludePatterns || [];
+  
+  // Load exclude patterns into textarea
+  if (excludePatterns.length > 0) {
+    excludePatternsEl.value = excludePatterns.join('\n');
+  }
   
   // تعيين حالة التبديل العام
   globalEnabled.checked = globalState;
@@ -26,6 +34,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     currentDomain = new URL(activeTab.url).hostname.toLowerCase();
     domainNameEl.textContent = currentDomain;
 
+    // Check if domain is excluded
+    const excludePatterns = storage.excludePatterns || [];
+    let isExcluded = false;
+    for (const pattern of excludePatterns) {
+      try {
+        const regex = new RegExp(pattern, 'i');
+        if (regex.test(currentDomain)) {
+          isExcluded = true;
+          break;
+        }
+      } catch (error) {
+        console.error("BidiFixer: Invalid exclude pattern:", error);
+      }
+    }
+
     // تطبيق الإعدادات الخاصة بالموقع (أو تعطيلها افتراضياً إذا كان الموقع جديداً)
     const siteSettings = prefs[currentDomain] || {
       enabled: null,
@@ -37,7 +60,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       siteEnabled.checked = siteSettings.enabled;
     } else {
       siteEnabled.checked = false;
-      siteEnabled.indeterminate = true; // Show indeterminate state when following global
+      siteEnabled.indeterminate = !isExcluded && globalState; // Show indeterminate state when following global and not excluded
     }
 
     forceImportant.checked = siteSettings.forceImportant;
@@ -80,14 +103,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // 3. دالة الحفظ للإعداد العام
   globalEnabled.addEventListener("change", async () => {
-    await chrome.storage.local.set({ globalEnabled: globalEnabled.checked });
+    await chrome.storage.sync.set({ globalEnabled: globalEnabled.checked });
     // Clear site-specific override if turning on global and site was disabled
     if (globalEnabled.checked && currentDomain) {
-      const updatedStorage = await chrome.storage.local.get(["sitePreferences"]);
+      const updatedStorage = await chrome.storage.sync.get(["sitePreferences"]);
       const updatedPrefs = updatedStorage.sitePreferences || {};
       if (updatedPrefs[currentDomain] && updatedPrefs[currentDomain].enabled === false) {
         delete updatedPrefs[currentDomain];
-        await chrome.storage.local.set({ sitePreferences: updatedPrefs });
+        await chrome.storage.sync.set({ sitePreferences: updatedPrefs });
         siteEnabled.checked = false;
         siteEnabled.indeterminate = true;
       }
@@ -97,7 +120,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 4. دالة الحفظ للموقع الحالي
   async function saveSiteSettings() {
     if (!currentDomain) return;
-    const updatedStorage = await chrome.storage.local.get(["sitePreferences"]);
+    const updatedStorage = await chrome.storage.sync.get(["sitePreferences"]);
     const updatedPrefs = updatedStorage.sitePreferences || {};
 
     updatedPrefs[currentDomain] = {
@@ -105,7 +128,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       forceImportant: forceImportant.checked,
     };
 
-    await chrome.storage.local.set({ sitePreferences: updatedPrefs });
+    await chrome.storage.sync.set({ sitePreferences: updatedPrefs });
     forceImportant.disabled = !siteEnabled.checked;
     siteEnabled.indeterminate = false;
   }
@@ -120,12 +143,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   resetBtn.addEventListener("click", async () => {
     if (!currentDomain) return;
     
-    const updatedStorage = await chrome.storage.local.get(["sitePreferences"]);
+    const updatedStorage = await chrome.storage.sync.get(["sitePreferences"]);
     const updatedPrefs = updatedStorage.sitePreferences || {};
     
     if (updatedPrefs[currentDomain]) {
       delete updatedPrefs[currentDomain];
-      await chrome.storage.local.set({ sitePreferences: updatedPrefs });
+      await chrome.storage.sync.set({ sitePreferences: updatedPrefs });
       
       // Reset UI to reflect global state
       siteEnabled.checked = globalEnabled.checked;
@@ -135,6 +158,32 @@ document.addEventListener("DOMContentLoaded", async () => {
       
       // Update badge indicator
       rtlIndicator.classList.remove("visible");
+    }
+  });
+  
+  // Save exclude patterns handler
+  saveExcludeBtn.addEventListener("click", async () => {
+    const patternsText = excludePatternsEl.value.trim();
+    const patterns = patternsText ? patternsText.split('\n').map(p => p.trim()).filter(p => p.length > 0) : [];
+    
+    try {
+      // Validate regex patterns
+      for (const pattern of patterns) {
+        new RegExp(pattern, 'i'); // Will throw if invalid
+      }
+      
+      await chrome.storage.sync.set({ excludePatterns: patterns });
+      
+      // Show feedback
+      const originalText = saveExcludeBtn.textContent;
+      saveExcludeBtn.textContent = "Saved!";
+      saveExcludeBtn.style.background = "#10b981";
+      setTimeout(() => {
+        saveExcludeBtn.textContent = originalText;
+        saveExcludeBtn.style.background = "";
+      }, 1500);
+    } catch (error) {
+      alert("Invalid regex pattern: " + error.message);
     }
   });
 });
