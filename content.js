@@ -2,73 +2,6 @@ if (typeof window.__arabicFixerLoaded === "undefined") {
   window.__arabicFixerLoaded = true;
   const STYLE_ID = "bidi-fixer-style";
   
-  // RTL language codes and scripts detection
-  const RTL_LANGUAGES = ['ar', 'fa', 'he', 'ur', 'ps', 'sd', 'yi', 'dv'];
-  const RTL_SCRIPTS = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/; // Arabic, Syriac, Samaritan, Mandaic, Arabic Extended, Presentation Forms
-  
-  function detectPageRTL() {
-    // Check html lang attribute
-    const htmlLang = document.documentElement.lang?.toLowerCase() || '';
-    if (RTL_LANGUAGES.some(lang => htmlLang.startsWith(lang))) {
-      return true;
-    }
-
-    // Check html dir attribute
-    const htmlDir = document.documentElement.dir?.toLowerCase() || '';
-    if (htmlDir === 'rtl') {
-      return true;
-    }
-
-    // Check body dir attribute
-    const bodyDir = document.body?.dir?.toLowerCase() || '';
-    if (bodyDir === 'rtl') {
-      return true;
-    }
-
-    // Check for significant RTL content - scan entire visible text (not just first 500 chars)
-    // Get all text content from body, excluding script and style tags
-    const walker = document.createTreeWalker(
-      document.body,
-      NodeFilter.SHOW_TEXT,
-      {
-        acceptNode: (node) => {
-          const parent = node.parentElement;
-          if (!parent) return NodeFilter.FILTER_REJECT;
-          const tagName = parent.tagName.toLowerCase();
-          // Skip script, style, and code elements
-          if (['script', 'style', 'code', 'pre', 'noscript'].includes(tagName)) {
-            return NodeFilter.FILTER_REJECT;
-          }
-          // Skip hidden elements
-          if (parent.offsetParent === null && getComputedStyle(parent).visibility === 'hidden') {
-            return NodeFilter.FILTER_REJECT;
-          }
-          return NodeFilter.FILTER_ACCEPT;
-        }
-      }
-    );
-
-    let bodyText = '';
-    let node;
-    while (node = walker.nextNode()) {
-      bodyText += node.textContent + ' ';
-    }
-
-    // Limit to first 2000 characters for performance, but much larger than before
-    bodyText = bodyText.substring(0, 2000);
-    
-    const rtlCharCount = (bodyText.match(RTL_SCRIPTS) || []).length;
-    const totalAlphaChars = bodyText.replace(/[^a-zA-Z\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g, '').length;
-
-    // If more than 20% of alphabetic characters are RTL (lowered threshold), consider it RTL page
-    // Also require minimum 10 RTL characters to avoid false positives on short text
-    if (totalAlphaChars > 10 && rtlCharCount >= 10 && rtlCharCount / totalAlphaChars > 0.2) {
-      return true;
-    }
-
-    return false;
-  }
-
   function generateCSS(forceImportant) {
     const imp = forceImportant ? " !important" : "";
     return `
@@ -144,10 +77,6 @@ if (typeof window.__arabicFixerLoaded === "undefined") {
         observer = null;
       }
       sendResponse({ success: true });
-    } else if (request.action === "DETECT_RTL") {
-      // Handle RTL detection request
-      const isRTL = detectPageRTL();
-      sendResponse({ isRTL });
     }
     return true;
   });

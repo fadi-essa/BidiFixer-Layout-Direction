@@ -37,16 +37,7 @@
       background: var(--bg-secondary); padding: 8px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 16px;
       display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);
     }
-    .domain-name { font-weight: bold; color: var(--accent-blue); max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .rtl-indicator { 
-      font-size: 11px; 
-      padding: 2px 8px; 
-      border-radius: 4px; 
-      background: var(--accent-green); 
-      color: white;
-      display: none;
-    }
-    .rtl-indicator.visible { display: inline-block; }
+    .domain-name { font-weight: bold; color: var(--accent-blue); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .section-card { background: var(--bg-secondary); border-radius: 8px; padding: 12px 14px; border: 1px solid var(--border-color); margin-bottom: 12px; }
     .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; font-size: 14px; }
     .setting-row:last-child { margin-bottom: 0; }
@@ -96,10 +87,7 @@
   </div>
 
   <div class="site-badge">
-    <div style="display: flex; align-items: center; gap: 8px;">
-      <span>Current Site:</span>
-      <span class="rtl-indicator" id="rtlIndicator">RTL Detected</span>
-    </div>
+    <span>Current Site:</span>
     <span class="domain-name" id="domainName">Loading...</span>
   </div>
 
@@ -120,8 +108,7 @@
     </div>
     
     <div class="action-buttons">
-      <button class="btn btn-detect" id="detectRtlBtn">Detect RTL</button>
-      <button class="btn btn-reset" id="resetBtn">Reset Site</button>
+      <button class="btn btn-reset" id="resetBtn" style="width: 100%;">Reset Site Settings</button>
     </div>
   </div>
   
