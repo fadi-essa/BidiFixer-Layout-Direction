@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 300px; margin: 0; padding: 16px;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background-color: #1e1e22; color: #e8eaed;
+    }
+    .header { text-align: center; margin-bottom: 16px; border-bottom: 1px solid #3f3f46; padding-bottom: 12px; }
+    .header h1 { font-size: 18px; margin: 0; color: #10b981; }
+    .site-badge {
+      background: #2b2b30; padding: 8px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 16px;
+      display: flex; justify-content: space-between; align-items: center; border: 1px solid #3f3f46;
+    }
+    .domain-name { font-weight: bold; color: #3b82f6; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .section-card { background: #2b2b30; border-radius: 8px; padding: 12px 14px; border: 1px solid #3f3f46; margin-bottom: 12px; }
+    .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; font-size: 14px; }
+    .setting-row:last-child { margin-bottom: 0; }
+    .sub-text { display: block; font-size: 11px; color: #9ca3af; margin-top: 2px; }
+    
+    .switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #52525b; transition: .3s; border-radius: 24px; }
+    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+    input:checked + .slider { background-color: #10b981; }
+    input:checked + .slider:before { transform: translateX(18px); }
+    input:disabled + .slider { opacity: 0.4; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>BidiFixer</h1>
+  </div>
+
+  <div class="site-badge">
+    <span>Current Site:</span>
+    <span class="domain-name" id="domainName">Loading...</span>
+  </div>
+
+  <div class="section-card">
+    <div class="setting-row">
+      <div>
+        <span>Enable on this site</span>
+        <span class="sub-text">Fix text direction & layout</span>
+      </div>
+      <label class="switch"><input type="checkbox" id="siteEnabled"><span class="slider"></span></label>
+    </div>
+    <div class="setting-row">
+      <div>
+        <span>Force Styles (!important)</span>
+        <span class="sub-text">Use if site resists changes</span>
+      </div>
+      <label class="switch"><input type="checkbox" id="forceImportant"><span class="slider"></span></label>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
