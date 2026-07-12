@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <style>
     body {
-      width: 300px; margin: 0; padding: 16px;
+      width: 320px; margin: 0; padding: 16px;
       font-family: 'Segoe UI', system-ui, sans-serif;
       background-color: #1e1e22; color: #e8eaed;
     }
@@ -27,12 +27,25 @@
     input:checked + .slider { background-color: #10b981; }
     input:checked + .slider:before { transform: translateX(18px); }
     input:disabled + .slider { opacity: 0.4; cursor: not-allowed; }
+    
+    .global-toggle-section { background: #374151; border: 1px solid #4b5563; }
+    .global-toggle-label { color: #fbbf24; }
   </style>
 </head>
 <body>
 
   <div class="header">
     <h1>BidiFixer</h1>
+  </div>
+
+  <div class="section-card global-toggle-section">
+    <div class="setting-row">
+      <div>
+        <span class="global-toggle-label">Enable on all sites</span>
+        <span class="sub-text">Global toggle for all websites</span>
+      </div>
+      <label class="switch"><input type="checkbox" id="globalEnabled"><span class="slider"></span></label>
+    </div>
   </div>
 
   <div class="site-badge">

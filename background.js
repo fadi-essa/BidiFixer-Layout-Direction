@@ -9,10 +9,18 @@ function getHostname(url) {
 
 async function getSiteState(domain) {
   if (!domain) return { enabled: false, forceImportant: false };
-  const storage = await chrome.storage.local.get(["sitePreferences"]);
+  const storage = await chrome.storage.local.get(["sitePreferences", "globalEnabled"]);
   const prefs = storage.sitePreferences || {};
-
-  return prefs[domain] || { enabled: false, forceImportant: false };
+  const globalEnabled = storage.globalEnabled || false;
+  
+  // Check site-specific settings first, then fall back to global
+  const siteState = prefs[domain] || { enabled: null, forceImportant: false };
+  
+  // If site has explicit setting, use it; otherwise use global
+  const enabled = siteState.enabled !== null ? siteState.enabled : globalEnabled;
+  const forceImportant = siteState.forceImportant;
+  
+  return { enabled, forceImportant };
 }
 
 // دالة تحديث الأيقونة والشارة الذكية (Badge) في شريط المتصفح
@@ -87,8 +95,11 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
 // مراقبة أي تغيير يدوي في الإعدادات من واجهة الإضافة
 chrome.storage.onChanged.addListener(async (changes, area) => {
   if (area === "local") {
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tabs[0] && tabs[0].url) updateTab(tabs[0].id, tabs[0].url);
+    // Update all tabs when global settings change
+    const tabs = await chrome.tabs.query({});
+    for (const tab of tabs) {
+      if (tab.url) updateTab(tab.id, tab.url);
+    }
   }
 });
 
