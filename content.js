@@ -77,6 +77,10 @@ if (typeof window.__arabicFixerLoaded === "undefined") {
         observer = null;
       }
       sendResponse({ success: true });
+    } else if (request.action === "DETECT_RTL") {
+      // Handle RTL detection request
+      const isRTL = detectPageRTL();
+      sendResponse({ isRTL });
     }
     return true;
   });
