@@ -43,7 +43,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           break;
         }
       } catch (error) {
-        console.error("BidiFixer: Invalid exclude pattern:", error);
+        console.error("RTL Fixer: Invalid exclude pattern:", error);
       }
     }
 

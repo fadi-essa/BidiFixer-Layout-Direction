@@ -20,11 +20,11 @@ async function getSiteState(domain) {
       try {
         const regex = new RegExp(pattern, 'i');
         if (regex.test(domain)) {
-          console.log(`BidiFixer: Domain ${domain} matches exclude pattern ${pattern}`);
+          console.log(`RTL Fixer: Domain ${domain} matches exclude pattern ${pattern}`);
           return { enabled: false, forceImportant: false };
         }
       } catch (error) {
-        console.error(`BidiFixer: Invalid exclude pattern ${pattern}:`, error);
+        console.error(`RTL Fixer: Invalid exclude pattern ${pattern}:`, error);
       }
     }
   }
@@ -106,7 +106,7 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
 // Cleanup: Reset badge when tab is closed to prevent stale state
 chrome.tabs.onRemoved.addListener((tabId) => {
   // Chrome automatically cleans up badge for closed tabs, but we log for debugging
-  console.log(`BidiFixer: Tab ${tabId} closed`);
+  console.log(`RTL Fixer: Tab ${tabId} closed`);
 });
 
 // Helper function to show keyboard feedback notification
@@ -130,7 +130,7 @@ async function showKeyboardFeedback(message, duration = 2000) {
       }
     }, duration);
   } catch (error) {
-    console.error("BidiFixer: Could not show keyboard feedback:", error);
+    console.error("RTL Fixer: Could not show keyboard feedback:", error);
   }
 }
 
