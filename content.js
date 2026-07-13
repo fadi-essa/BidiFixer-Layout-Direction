@@ -99,7 +99,7 @@ if (typeof window.__arabicFixerLoaded === "undefined") {
     // Wait for storage to be ready before applying styles (fix race condition)
     chrome.storage.sync.get(["sitePreferences", "globalEnabled", "excludePatterns"], (result) => {
       if (chrome.runtime.lastError) {
-        console.error("BidiFixer: Storage access error:", chrome.runtime.lastError);
+        console.error("RTL Fixer: Storage access error:", chrome.runtime.lastError);
         return;
       }
       
@@ -115,18 +115,18 @@ if (typeof window.__arabicFixerLoaded === "undefined") {
           try {
             const regex = new RegExp(pattern, 'i');
             if (regex.test(domain)) {
-              console.log(`BidiFixer: Domain ${domain} matches exclude pattern ${pattern}`);
+              console.log(`RTL Fixer: Domain ${domain} matches exclude pattern ${pattern}`);
               isExcluded = true;
               break;
             }
           } catch (error) {
-            console.error(`BidiFixer: Invalid exclude pattern ${pattern}:`, error);
+            console.error(`RTL Fixer: Invalid exclude pattern ${pattern}:`, error);
           }
         }
       }
       
       if (isExcluded) {
-        console.log(`BidiFixer: Skipping ${domain} due to exclude pattern`);
+        console.log(`RTL Fixer: Skipping ${domain} due to exclude pattern`);
         return;
       }
 
@@ -152,6 +152,6 @@ if (typeof window.__arabicFixerLoaded === "undefined") {
       }
     });
   } catch (error) {
-    console.error("BidiFixer: Error during initialization:", error);
+    console.error("RTL Fixer: Error during initialization:", error);
   }
 }

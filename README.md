@@ -1,4 +1,4 @@
-# BidiFixer: Layout & Direction
+# RTL Fixer: Layout & Direction
 
 A smart Chrome extension that fixes mixed text direction issues for websites displaying Arabic, Hebrew, or other RTL (Right-to-Left) languages alongside LTR (Left-to-Right) content.
 
@@ -15,7 +15,7 @@ A smart Chrome extension that fixes mixed text direction issues for websites dis
 
 ## How It Works
 
-BidiFixer injects CSS rules that set:
+RTL Fixer injects CSS rules that set:
 - `direction: rtl` for paragraphs, lists, headings, blockquotes, tables, inputs, and textareas
 - `text-align: start` for proper alignment based on text direction
 - Preserves LTR direction for code elements (`pre`, `code`, `kbd`, `samp`)
