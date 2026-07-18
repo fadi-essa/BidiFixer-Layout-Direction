@@ -89,7 +89,6 @@
   <div class="site-badge">
     <div style="display: flex; align-items: center; gap: 8px;">
       <span>Current Site:</span>
-      <!-- <span class="rtl-indicator" id="rtlIndicator">RTL Detected</span> -->
     </div>
     <span class="domain-name" id="domainName">Loading...</span>
   </div>
@@ -98,13 +97,13 @@
     <div class="setting-row">
       <div>
         <span>Enable on this site</span>
-        <span class="sub-text">Fix text direction & layout</span>
+        <span class="sub-text" id="siteStatusHint">Loading...</span>
       </div>
       <label class="switch"><input type="checkbox" id="siteEnabled"><span class="slider"></span></label>
     </div>
     <div class="setting-row">
       <div>
-        <span>Force Styles (!important)</span>
+        <span>Force Styles (important!)</span>
         <span class="sub-text">Use if site resists changes</span>
       </div>
       <label class="switch"><input type="checkbox" id="forceImportant"><span class="slider"></span></label>
@@ -122,7 +121,7 @@
         <span class="sub-text">Regex patterns to disable extension (one per line)</span>
       </div>
     </div>
-    <textarea id="excludePatterns" rows="3" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); font-family: monospace; font-size: 12px; resize: vertical;" placeholder="example\.com&#10;.*\.test\.org"></textarea>
+    <textarea id="excludePatterns" rows="3" style="width: 96%; padding: 4px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); font-family: monospace; font-size: 12px; resize: vertical;" placeholder="example\.com&#10;.*\.test\.org"></textarea>
     <button class="btn" id="saveExcludeBtn" style="background: var(--accent-blue); color: white; margin-top: 8px; width: 100%;">Save Exclude Patterns</button>
   </div>
 

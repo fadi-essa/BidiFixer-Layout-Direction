@@ -6,38 +6,63 @@ document.addEventListener("DOMContentLoaded", async () => {
   const resetBtn = document.getElementById("resetBtn");
   const excludePatternsEl = document.getElementById("excludePatterns");
   const saveExcludeBtn = document.getElementById("saveExcludeBtn");
-  
-  // Read site preferences and global settings from sync storage
-  const storage = await chrome.storage.sync.get(["sitePreferences", "globalEnabled", "excludePatterns"]);
-  const prefs = storage.sitePreferences || {};
+  const siteStatusHint = document.getElementById("siteStatusHint");
+
+  let currentDomain = null;
+
+  const storage = await chrome.storage.local.get(["globalEnabled", "excludePatterns"]);
   const globalState = storage.globalEnabled || false;
   const excludePatterns = storage.excludePatterns || [];
-  
-  // Load exclude patterns into textarea
+
   if (excludePatterns.length > 0) {
-    excludePatternsEl.value = excludePatterns.join('\n');
+    excludePatternsEl.value = excludePatterns.join("\n");
   }
-  
-  // تعيين حالة التبديل العام
+
   globalEnabled.checked = globalState;
 
-  // 2. التحقق من الصفحة المفتوحة لمعرفة النطاق (Domain)
+  async function safeStorageSet(obj) {
+    try {
+      await chrome.storage.local.set(obj);
+      return true;
+    } catch (error) {
+      console.error("RTL Fixer: storage write failed:", error);
+      alert("Couldn't save settings (storage write failed). Try again, or clear some site settings.");
+      return false;
+    }
+  }
+
+
+  function refreshSiteEnabledUI(explicitEnabled, isExcluded) {
+    if (isExcluded) {
+      siteEnabled.checked = false;
+      siteStatusHint.textContent = "Excluded via URL pattern";
+      return;
+    }
+
+    if (explicitEnabled === null || explicitEnabled === undefined) {
+      const effective = globalEnabled.checked;
+      siteEnabled.checked = effective;
+      siteStatusHint.textContent = `Following global setting (currently ${effective ? "ON" : "OFF"})`;
+    } else {
+      siteEnabled.checked = explicitEnabled;
+      siteStatusHint.textContent = `Explicitly set ${explicitEnabled ? "ON" : "OFF"} for this site`;
+    }
+  }
+
   const [activeTab] = await chrome.tabs.query({
     active: true,
     currentWindow: true,
   });
-  let currentDomain = null;
+
+  let isExcluded = false;
 
   if (activeTab && activeTab.url && activeTab.url.startsWith("http")) {
     currentDomain = new URL(activeTab.url).hostname.toLowerCase();
     domainNameEl.textContent = currentDomain;
 
-    // Check if domain is excluded
-    const excludePatterns = storage.excludePatterns || [];
-    let isExcluded = false;
     for (const pattern of excludePatterns) {
       try {
-        const regex = new RegExp(pattern, 'i');
+        const regex = new RegExp(pattern, "i");
         if (regex.test(currentDomain)) {
           isExcluded = true;
           break;
@@ -47,101 +72,119 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
 
-    // تطبيق الإعدادات الخاصة بالموقع (أو تعطيلها افتراضياً إذا كان الموقع جديداً)
-    const siteSettings = prefs[currentDomain] || {
-      enabled: null,
-      forceImportant: false,
-    };
+    const siteData = await chrome.storage.local.get([`site:${currentDomain}`]);
+    const siteSettings = siteData[`site:${currentDomain}`] || { enabled: null, forceImportant: false };
 
-    // If site has explicit setting, use it; otherwise show unchecked but will follow global
-    if (siteSettings.enabled !== null) {
-      siteEnabled.checked = siteSettings.enabled;
-    } else {
-      siteEnabled.checked = false;
-      siteEnabled.indeterminate = !isExcluded && globalState; // Show indeterminate state when following global and not excluded
-    }
+    refreshSiteEnabledUI(siteSettings.enabled, isExcluded);
 
-    forceImportant.checked = siteSettings.forceImportant;
-    forceImportant.disabled = !siteEnabled.checked;
-    
-    // Auto-detect RTL on popup open (removed - feature disabled)
+    forceImportant.checked = !!siteSettings.forceImportant;
+    forceImportant.disabled = isExcluded || !siteEnabled.checked;
+    siteEnabled.disabled = isExcluded;
   } else {
-    // صفحة غير مدعومة (مثل إعدادات كروم أو تبويب فارغ)
     domainNameEl.textContent = "Unsupported Page";
     domainNameEl.style.color = "#ef4444";
     siteEnabled.disabled = true;
     forceImportant.disabled = true;
     resetBtn.disabled = true;
+    siteStatusHint.textContent = "Not available on this page";
   }
 
-  // Function to save site settings
   globalEnabled.addEventListener("change", async () => {
-    await chrome.storage.sync.set({ globalEnabled: globalEnabled.checked });
-    // Clear site-specific override if turning on global and site was disabled
-    if (globalEnabled.checked && currentDomain) {
-      const updatedStorage = await chrome.storage.sync.get(["sitePreferences"]);
-      const updatedPrefs = updatedStorage.sitePreferences || {};
-      if (updatedPrefs[currentDomain] && updatedPrefs[currentDomain].enabled === false) {
-        delete updatedPrefs[currentDomain];
-        await chrome.storage.sync.set({ sitePreferences: updatedPrefs });
-        siteEnabled.checked = false;
-        siteEnabled.indeterminate = true;
-      }
+    const ok = await safeStorageSet({ globalEnabled: globalEnabled.checked });
+    if (!ok) {
+      globalEnabled.checked = !globalEnabled.checked;
+      return;
+    }
+
+    if (!currentDomain || isExcluded) return;
+
+    const data = await chrome.storage.local.get([`site:${currentDomain}`]);
+    const existing = data[`site:${currentDomain}`];
+
+    if (globalEnabled.checked && existing && existing.enabled === false) {
+      await chrome.storage.local.remove(`site:${currentDomain}`);
+      refreshSiteEnabledUI(null, false);
+      forceImportant.checked = false;
+      forceImportant.disabled = !siteEnabled.checked;
+      return;
+    }
+
+    if (!existing || existing.enabled === null || existing.enabled === undefined) {
+      refreshSiteEnabledUI(null, false);
     }
   });
 
-  // Function to save site settings
-  async function saveSiteSettings() {
+  async function saveSiteEnabled() {
     if (!currentDomain) return;
-    const updatedStorage = await chrome.storage.sync.get(["sitePreferences"]);
-    const updatedPrefs = updatedStorage.sitePreferences || {};
+    const data = await chrome.storage.local.get([`site:${currentDomain}`]);
+    const existing = data[`site:${currentDomain}`] || {};
 
-    updatedPrefs[currentDomain] = {
-      enabled: siteEnabled.checked,
-      forceImportant: forceImportant.checked,
-    };
+    const ok = await safeStorageSet({
+      [`site:${currentDomain}`]: {
+        ...existing,
+        enabled: siteEnabled.checked,
+        forceImportant: forceImportant.checked,
+      },
+    });
+    if (!ok) return;
 
-    await chrome.storage.sync.set({ sitePreferences: updatedPrefs });
     forceImportant.disabled = !siteEnabled.checked;
-    siteEnabled.indeterminate = false;
+    siteStatusHint.textContent = `Explicitly set ${siteEnabled.checked ? "ON" : "OFF"} for this site`;
   }
 
-  siteEnabled.addEventListener("change", saveSiteSettings);
-  forceImportant.addEventListener("change", saveSiteSettings);
-  
-  // Reset site settings button handler
+  async function saveForceImportantOnly() {
+    if (!currentDomain) return;
+    const data = await chrome.storage.local.get([`site:${currentDomain}`]);
+    const existing = data[`site:${currentDomain}`];
+
+    const hasExplicitEnabled =
+      existing && existing.enabled !== null && existing.enabled !== undefined;
+
+    await safeStorageSet({
+      [`site:${currentDomain}`]: {
+        enabled: hasExplicitEnabled ? existing.enabled : null,
+        forceImportant: forceImportant.checked,
+      },
+    });
+  }
+
+  siteEnabled.addEventListener("change", saveSiteEnabled);
+  forceImportant.addEventListener("change", saveForceImportantOnly);
+
+
   resetBtn.addEventListener("click", async () => {
     if (!currentDomain) return;
-    
-    const updatedStorage = await chrome.storage.sync.get(["sitePreferences"]);
-    const updatedPrefs = updatedStorage.sitePreferences || {};
-    
-    if (updatedPrefs[currentDomain]) {
-      delete updatedPrefs[currentDomain];
-      await chrome.storage.sync.set({ sitePreferences: updatedPrefs });
-      
-      // Reset UI to reflect global state
-      siteEnabled.checked = globalEnabled.checked;
-      siteEnabled.indeterminate = !globalEnabled.checked;
-      forceImportant.checked = false;
-      forceImportant.disabled = true;
-    }
+
+    await chrome.storage.local.remove(`site:${currentDomain}`);
+
+    refreshSiteEnabledUI(null, false);
+    forceImportant.checked = false;
+    forceImportant.disabled = !siteEnabled.checked;
   });
-  
-  // Save exclude patterns handler
+
   saveExcludeBtn.addEventListener("click", async () => {
     const patternsText = excludePatternsEl.value.trim();
-    const patterns = patternsText ? patternsText.split('\n').map(p => p.trim()).filter(p => p.length > 0) : [];
-    
+    const patterns = patternsText
+      ? patternsText.split("\n").map((p) => p.trim()).filter((p) => p.length > 0)
+      : [];
+
     try {
-      // Validate regex patterns
       for (const pattern of patterns) {
-        new RegExp(pattern, 'i'); // Will throw if invalid
+        new RegExp(pattern, "i"); 
+
+        if (pattern.length > 200) {
+          throw new Error(`Pattern "${pattern}" is too long (max 200 characters)`);
+        }
+        if (/(\([^)]*[+*][^)]*\)[+*])/.test(pattern)) {
+          throw new Error(
+            `Pattern "${pattern}" looks like it could cause catastrophic backtracking`,
+          );
+        }
       }
-      
-      await chrome.storage.sync.set({ excludePatterns: patterns });
-      
-      // Show feedback
+
+      const ok = await safeStorageSet({ excludePatterns: patterns });
+      if (!ok) return;
+
       const originalText = saveExcludeBtn.textContent;
       saveExcludeBtn.textContent = "Saved!";
       saveExcludeBtn.style.background = "#10b981";
@@ -150,7 +193,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         saveExcludeBtn.style.background = "";
       }, 1500);
     } catch (error) {
-      alert("Invalid regex pattern: " + error.message);
+      alert("Invalid exclude pattern: " + error.message);
     }
   });
 });

@@ -8,9 +8,10 @@ A smart Chrome extension that fixes mixed text direction issues for websites dis
 - **Global Toggle**: Enable/disable the extension across all websites with a single switch
 - **Per-Site Settings**: Customize settings for individual websites
 - **Force Important Mode**: Override stubborn website styles with `!important` flag
+- **Exclude URL Patterns**: Disable the extension on domains matching one or more regular expressions, regardless of the global or per-site toggle
 - **Keyboard Shortcut**: Quick toggle with `Ctrl+Shift+E` (Windows/Linux) or `Cmd+Shift+E` (Mac)
 - **Visual Status Badge**: Clear ON/OFF indicator in the browser toolbar
-- **Dynamic Content Support**: Works with Single Page Applications (SPAs) like Gmail and Twitter using MutationObserver
+- **Works with Dynamic Content**: The injected CSS rules use tag/class-based selectors, so they apply automatically to new elements as they're added — no extra processing needed for Single Page Applications (SPAs) like Gmail and Twitter
 - **Dark Mode UI**: Modern, eye-friendly popup interface
 
 ## How It Works
@@ -45,6 +46,11 @@ RTL Fixer injects CSS rules that set:
 - Click the extension icon
 - Use **Enable on this site** to toggle for the current domain only
 - Enable **Force Styles (!important)** if the website resists direction changes
+- Use **Reset Site Settings** to clear a site's override and go back to following the global toggle
+
+### Exclude URL Patterns
+- Open the popup and enter one regular expression per line in the **Exclude URL Patterns** box
+- Any domain matching a pattern is skipped entirely, even if the global toggle or a site-specific setting would otherwise enable it
 
 ### Keyboard Shortcut
 Press `Ctrl+Shift+E` (or `Cmd+Shift+E` on Mac) to quickly toggle the extension for the current site.
@@ -56,7 +62,6 @@ Press `Ctrl+Shift+E` (or `Cmd+Shift+E` on Mac) to quickly toggle the extension f
 
 ### Permissions
 - `storage`: Save user preferences
-- `activeTab`: Access current tab information
 - `tabs`: Monitor tab changes for badge updates
 - `scripting`: Inject content scripts when needed
 
@@ -86,4 +91,4 @@ Feel free to submit issues or pull requests for improvements!
 
 ---
 
-**Note**: This extension works locally and does not send any data to external servers. All settings are stored in your browser's local storage.
+**Note**: This extension works locally and does not send any data to external servers. All settings are stored in your browser's local storage (`chrome.storage.local`), scoped per site.
